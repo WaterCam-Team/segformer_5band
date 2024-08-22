@@ -32,7 +32,7 @@ model = dict(
 
 # dataset settings
 dataset_type = 'dataset_5band'
-data_root = 'my_5band_data/'
+data_root = '5band_data/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 crop_size = (512, 1024)
@@ -84,8 +84,8 @@ data = dict(
     test=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='my_5band_data/img_dir',
-        ann_dir='my_5band_data/ann_dir',
+        img_dir='5band_data/img_dir',
+        ann_dir='5band_data/ann_dir',
         pipeline=test_pipeline))
 
 # evaluation = dict(interval=4000, metric='mIoU')
