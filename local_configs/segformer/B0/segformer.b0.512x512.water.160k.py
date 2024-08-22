@@ -32,7 +32,7 @@ model = dict(
 
 # dataset settings
 dataset_type = 'WaterDataset'
-data_root = '/data1/huantao/workspace/project/flood_seg/dataset/my_waterdataset/'
+data_root = 'dataset/my_waterdataset/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 crop_size = (512, 1024)

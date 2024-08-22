@@ -50,7 +50,7 @@ runner = dict(type='IterBasedRunner', max_iters=100)
 checkpoint_config = dict(by_epoch=False, interval=20)
 evaluation = dict(interval=50, metric='mIoU')
 dataset_type = 'dataset_5band'
-data_root = '/data1/huantao/workspace/project/flood_seg/dataset/my_5band_data/'
+data_root = '5band_data/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=False)
 crop_size = (512, 1024)
@@ -96,7 +96,7 @@ data = dict(
         dataset=dict(
             type='dataset_5band',
             data_root=
-            '/data1/huantao/workspace/project/flood_seg/dataset/my_5band_data/',
+            '5band_data/',
             img_dir='img_dir',
             ann_dir='ann_dir',
             pipeline=[
@@ -123,7 +123,7 @@ data = dict(
     val=dict(
         type='dataset_5band',
         data_root=
-        '/data1/huantao/workspace/project/flood_seg/dataset/my_5band_data/',
+        '5band_data/',
         img_dir='img_dir',
         ann_dir='ann_dir',
         pipeline=[
@@ -147,7 +147,7 @@ data = dict(
     test=dict(
         type='dataset_5band',
         data_root=
-        '/data1/huantao/workspace/project/flood_seg/dataset/my_5band_data/',
+        '5band_data/',
         img_dir='img_dir',
         ann_dir='ann_dir',
         pipeline=[

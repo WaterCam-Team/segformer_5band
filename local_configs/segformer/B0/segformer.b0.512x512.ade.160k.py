@@ -10,7 +10,7 @@ norm_cfg = dict(type='SyncBN', requires_grad=True)
 find_unused_parameters = True
 model = dict(
     type='EncoderDecoder',
-    pretrained='/data1/huantao/workspace/project/flood_seg/SegFormer/pretrained/mit_b0.pth',
+    pretrained='pretrained/mit_b0.pth',
     backbone=dict(
         type='mit_b0',
         style='pytorch'),

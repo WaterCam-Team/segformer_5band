@@ -2,9 +2,9 @@ import os
 from glob import glob
 from shutil import copy
 
-data_path = "/data1/huantao/workspace/project/flood_seg/dataset/Flood_dataset/Flood_Amateur_Video_for_Semantic_Segmentation_Dataset/flood_dataset/images"
-anno_path = "/data1/huantao/workspace/project/flood_seg/dataset/Flood_dataset/Flood_Amateur_Video_for_Semantic_Segmentation_Dataset/flood_dataset/annotations"
-new_path = "/data1/huantao/workspace/project/flood_seg/dataset/my_5cls_flood_dataset"
+data_path = "flood_dataset/images"
+anno_path = "flood_dataset/annotations"
+new_path = "5cls_flood_dataset"
 img_files = sorted(os.listdir(data_path))
 for sub_folder in img_files:
     img_list = glob(os.path.join(data_path, sub_folder, '*.jpg'))
