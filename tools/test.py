@@ -17,7 +17,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='mmseg test (and eval) a model')
     parser.add_argument('--config', help='test config file path',default='./local_configs/segformer/B0/segformer.b0.512x512.water.65k.py')
-    parser.add_argument('--checkpoint', help='checkpoint file',default='/data1/huantao/workspace/project/flood_seg/SegFormer/work_dirs/segformer.b0.512x512.water.65k/iter_65000.pth')
+    parser.add_argument('--checkpoint', help='checkpoint file',default='work_dirs/segformer.b0.512x512.water.65k/iter_65000.pth')
     parser.add_argument(
         '--aug-test', action='store_true', help='Use Flip and Multi scale aug')
     parser.add_argument('--out', default='work_dirs/res.pkl', help='output result file in pickle format')
@@ -36,7 +36,7 @@ def parse_args():
         ' for generic datasets, and "cityscapes" for Cityscapes')
     parser.add_argument('--show', action='store_true', help='show results',default=True)
     parser.add_argument(
-        '--show-dir', help='directory where painted images will be saved',default='/data1/huantao/workspace/project/flood_seg/seg_result/segformer')
+        '--show-dir', help='directory where painted images will be saved',default='results')
     parser.add_argument(
         '--gpu-collect',
         action='store_true',

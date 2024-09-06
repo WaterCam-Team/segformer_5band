@@ -17,7 +17,9 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='mmseg test (and eval) a model')
     parser.add_argument('--config', help='test config file path',default='./local_configs/segformer/B0/segformer.b0.512x512.flood_5band_2cls.65k.test.py')
-    parser.add_argument('--checkpoint', help='checkpoint file',default='./work_dirs/segformer.b0.512x512.flood_5band_2cls.65k/iter_100.pth')
+    parser.add_argument('--checkpoint', help='checkpoint file',default='./work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_huantao/iter_100.pth')
+    # parser.add_argument('--checkpoint', help='checkpoint file',default='/home/pi/git/SegFormerBusted/checkpoint/iter_65000.pth')
+    
     parser.add_argument(
         '--aug-test', action='store_true', help='Use Flip and Multi scale aug')
     parser.add_argument('--out', default='work_dirs/res.pkl', help='output result file in pickle format')

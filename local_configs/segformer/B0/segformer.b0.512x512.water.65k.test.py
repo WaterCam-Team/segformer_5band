@@ -84,8 +84,8 @@ data = dict(
     test=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='/data1/huantao/workspace/project/flood_seg/dataset/Flood_dataset/Summer_2022_Labels',
-        ann_dir='/data1/huantao/workspace/project/flood_seg/dataset/Flood_dataset/Summer_2022_Labels',
+        img_dir='data',
+        ann_dir='data',
         pipeline=test_pipeline))
 
 # evaluation = dict(interval=4000, metric='mIoU')
