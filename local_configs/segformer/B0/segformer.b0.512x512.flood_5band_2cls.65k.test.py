@@ -84,7 +84,7 @@ data = dict(
     test=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='/home/pi/git/segformer_5band/dataroot/5band_data',
+        img_dir='5band_data',
         ann_dir='ann_dir',
         pipeline=test_pipeline))
 

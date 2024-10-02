@@ -136,9 +136,8 @@ class Load_5band_ImageFromFile(object):
                                 results['img_info']['filename'])
         else:
             filename = results['img_info']['filename']
-        # img_bytes = self.file_client.get(filename)
-        # img = mmcv.imfrombytes(
-            # img_bytes, flag=self.color_type, backend=self.imdecode_backend)
+        img_bytes = self.file_client.get(filename)
+        #img = mmcv.imfrombytes(img_bytes, flag=self.color_type, backend=self.imdecode_backend)
         img = rasterio.open(filename).read()
         img = img.transpose(1,2,0)
         if self.to_float32:
