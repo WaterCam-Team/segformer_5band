@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/home/pi/miniforge3/envs/5band/bin/python3 
+# use 5band env created by miniforge3 using SegformerDeps repo
 """
 Single file inference script for 5-band flood segmentation.
 
