@@ -647,28 +647,10 @@ class Normalize_5band(object):
         self.to_rgb = to_rgb
 
     def __call__(self, results):
-        """Call function to normalize images.
-
-        Args:
-            results (dict): Result dict from loading pipeline.
-
-        Returns:
-            dict: Normalized results, 'img_norm_cfg' key is added into
-                result dict.
-        """
-
-        # results['img'] = mmcv.imnormalize(results['img'], self.mean, self.std,
-        #                                   self.to_rgb)
-        # results['img_norm_cfg'] = dict(
-        #     mean=self.mean, std=self.std, to_rgb=self.to_rgb)
-        # return results
-        normalized_image = np.zeros_like(results['img'], dtype=np.float32)
-        for i in range(results['img'].shape[2]):  # Iterate over each band
-            band = results['img'][:, :, i]
-            min_val = np.min(band)
-            max_val = np.max(band)
-            normalized_image[:, :, i] = (band - min_val) / (max_val - min_val + 1e-7)  # Avoid division by zero
-        results['img'] = normalized_image
+        img = results['img'].astype(np.float32)
+        for i in range(img.shape[2]):
+            img[:, :, i] = (img[:, :, i] - self.mean[i]) / (self.std[i] + 1e-7)
+        results['img'] = img
         results['img_norm_cfg'] = dict(
             mean=self.mean, std=self.std, to_rgb=self.to_rgb)
         return results
@@ -678,6 +660,30 @@ class Normalize_5band(object):
         repr_str += f'(mean={self.mean}, std={self.std}, to_rgb=' \
                     f'{self.to_rgb})'
         return repr_str
+
+
+@PIPELINES.register_module()
+class Normalize_1band(object):
+    """Normalize a single-channel (grayscale/thermal) image using dataset statistics.
+
+    Args:
+        mean (float): Per-channel mean.
+        std (float): Per-channel std.
+    """
+
+    def __init__(self, mean, std):
+        self.mean = float(mean)
+        self.std = float(std)
+
+    def __call__(self, results):
+        img = results['img'].astype(np.float32)
+        img = (img - self.mean) / (self.std + 1e-7)
+        results['img'] = img
+        results['img_norm_cfg'] = dict(mean=self.mean, std=self.std)
+        return results
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(mean={self.mean}, std={self.std})'
 
 
 @PIPELINES.register_module()

@@ -14,10 +14,14 @@ from .cocostuff import CocoStuff
 from .waterdataset import WaterDataset
 from .flood_dataset_6cls import flood_dataset_6cls
 from .dataset_5band import dataset_5band
+from .dataset_rgb import dataset_rgb_std, dataset_rgb_nofilt
+from .dataset_lwir import dataset_lwir
 
 __all__ = [
     'CustomDataset', 'build_dataloader', 'ConcatDataset', 'RepeatDataset',
-    'DATASETS', 'build_dataset', 'PIPELINES', 'CityscapesDataset','dataset_5band',
-    'PascalVOCDataset', 'ADE20KDataset', 'PascalContextDataset','waterdataset', 'flood_dataset_6cls',
-    'ChaseDB1Dataset', 'DRIVEDataset', 'HRFDataset', 'STAREDataset', 'MapillaryDataset', 'CocoStuff'
+    'DATASETS', 'build_dataset', 'PIPELINES', 'CityscapesDataset', 'dataset_5band',
+    'dataset_rgb_std', 'dataset_rgb_nofilt', 'dataset_lwir',
+    'PascalVOCDataset', 'ADE20KDataset', 'PascalContextDataset', 'waterdataset',
+    'flood_dataset_6cls', 'ChaseDB1Dataset', 'DRIVEDataset', 'HRFDataset',
+    'STAREDataset', 'MapillaryDataset', 'CocoStuff'
 ]

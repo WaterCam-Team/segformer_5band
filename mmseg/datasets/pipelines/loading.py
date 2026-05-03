@@ -168,6 +168,41 @@ class Load_5band_ImageFromFile(object):
 
 
 @PIPELINES.register_module()
+class Load_LWIR_ImageFromFile(object):
+    """Load a single-channel LWIR image from a PGM (or any grayscale) file.
+
+    Outputs img as HxWx1 float32 array.
+    """
+
+    def __call__(self, results):
+        import cv2
+        if results.get('img_prefix') is not None:
+            filename = osp.join(results['img_prefix'],
+                                results['img_info']['filename'])
+        else:
+            filename = results['img_info']['filename']
+
+        img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise FileNotFoundError(f'LWIR image not found: {filename}')
+        img = img[:, :, np.newaxis].astype(np.float32)
+
+        results['filename'] = filename
+        results['ori_filename'] = results['img_info']['filename']
+        results['img'] = img
+        results['img_shape'] = img.shape
+        results['ori_shape'] = img.shape
+        results['pad_shape'] = img.shape
+        results['scale_factor'] = 1.0
+        results['img_norm_cfg'] = dict(mean=np.zeros(1, dtype=np.float32),
+                                       std=np.ones(1, dtype=np.float32))
+        return results
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+
+@PIPELINES.register_module()
 class LoadAnnotations(object):
     """Load annotations for semantic segmentation.
 
