@@ -226,14 +226,21 @@ class SingleFileInference5Band:
         if ph or pw:
             # MEASURED CAVEAT: padding is not free. MiT's spatial-reduction
             # attention pools globally, so a padded strip shifts predictions
-            # across the whole image, not just at the border. On lake.tiff
-            # (1296x972 -> pipeline 512x683 -> padded 512x704) torch itself
-            # agrees with torch only 94.33% of the time between padded and
-            # unpadded input, and the water fraction moves 13.74% -> 9.32%.
-            # No padding mode avoids it -- replicate and reflect shift it the
-            # other way (14.8%). The magnitude tracks how confident the model
-            # is: the 40k-iteration type_pool model changes by 0.79%, this
-            # 100-iteration checkpoint by 5.67%.
+            # across the whole image, not just at the border.
+            #
+            # Measured over 64 real 5-band captures (Onondaga Lake Park, all
+            # 1296x972 -> pipeline 512x683 -> padded 512x704), comparing torch
+            # against torch with no ONNX involved:
+            #
+            #   pixels agreeing     mean 96.73%   range 91.37% - 98.79%
+            #   water fraction      mean +0.89 pts, range -3.85 to +4.88
+            #   shifted over 1 pt   39 of 64 images
+            #
+            # The direction is not systematic -- it moves both ways depending
+            # on content. No padding mode avoids it; replicate and reflect
+            # simply bias differently. The magnitude tracks how confident the
+            # model is: the 40k-iteration type_pool model moves 0.79% of
+            # pixels, this 100-iteration checkpoint 3.3% on average.
             #
             # Feed dimensions already divisible by 32 to avoid this entirely.
             print(f"  WARNING: input {h}x{w} is not divisible by 32; padding "
