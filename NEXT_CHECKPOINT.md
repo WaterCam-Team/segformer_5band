@@ -93,6 +93,26 @@ there disagreed by 42 px at the median, which the tool warns about.
 Also note there is no `camera_calibration.json` on the node, so lens undistortion never runs and the
 transform is fitted between two distorted images.
 
+## 4b. The five-band stem is not warm-started by this training path
+
+Found while checking a review comment. Building the B0 five-band config with `pretrained=
+'pretrained/mit_b0.pth'` **does not fail** — mmcv's `load_checkpoint(strict=False)` logs the
+mismatch and skips that tensor:
+
+    size mismatch for patch_embed1.proj.weight: copying a param with shape
+    torch.Size([32, 3, 7, 7]) from checkpoint, the shape in current model is
+    torch.Size([32, 5, 7, 7])
+
+The build succeeds and the stem is correctly `(32, 5, 7, 7)`. But **it is randomly initialised**,
+because the only tensor that could have seeded it was the one skipped. Everything downstream of the
+stem is warm-started; the first convolution is not.
+
+`photo_processing/training/models/segformer.py` does this properly: it rebuilds the stem and
+warm-starts it from the RGB filters (`base.SegModel.adapt_stem`). **This training path has no
+equivalent.** At 100 iterations it hardly matters, but for a real training run a randomly
+initialised first layer against warm-started everything else is worth fixing — seed the RGB
+channels from the pretrained filters and the thermal and NIR channels from their mean.
+
 ## 5. What the training data situation actually is
 
 - **Masks are binary, 2-class**, painted on the 1296x972 grid. Three class decisions are still open
