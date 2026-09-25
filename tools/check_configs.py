@@ -28,7 +28,13 @@ Checks
    three-entry ImageNet mean against a five-band model normalises RGB and
    leaves thermal and NIR at raw 0-255, silently.
 
-5. Everything compiles.
+5. Every transform a config names is registered. A class can exist and still
+   be missing its `@PIPELINES.register_module()`, in which case `Compose`
+   cannot build it:
+       KeyError: 'Normalize_1band is not in the pipeline registry'
+   Check 1 does not catch this: the class is defined, just not registered.
+
+6. Everything compiles.
 """
 from __future__ import annotations
 
@@ -151,6 +157,13 @@ def check_config(path: Path) -> None:
             fail(where, f"in_chans={backbone['in_chans']} but the pipeline loads "
                         f"{expected}-band input ({sorted(loaders) or 'default RGB'})")
 
+    defined, registered = registered_transforms()
+    for d in walk_dicts(cfg):
+        t = d.get("type")
+        if isinstance(t, str) and t in defined and t not in registered:
+            fail(where, f"pipeline names {t!r}, which is defined in mmseg/datasets/pipelines "
+                        f"but carries no @PIPELINES.register_module(); Compose cannot build it")
+
     for d in walk_dicts(cfg):
         if d.get("type") != "Normalize_5band":
             continue
@@ -166,6 +179,29 @@ def check_config(path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- 5
+def registered_transforms() -> tuple[set[str], set[str]]:
+    """(classes defined in pipelines/, those carrying @PIPELINES.register_module)."""
+    defined: set[str] = set()
+    registered: set[str] = set()
+    for mod in sorted(PIPELINES.glob("*.py")):
+        for node in ast.walk(ast.parse(mod.read_text())):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            defined.add(node.name)
+            for dec in node.decorator_list:
+                func = dec.func if isinstance(dec, ast.Call) else dec
+                name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+                if name == "register_module":
+                    registered.add(node.name)
+                    # an explicit name= overrides the class name
+                    if isinstance(dec, ast.Call):
+                        for kw in dec.keywords:
+                            if kw.arg == "name" and isinstance(kw.value, ast.Constant):
+                                registered.add(kw.value.value)
+    return defined, registered
+
+
+# --------------------------------------------------------------------------- 6
 def check_compiles() -> None:
     for p in sorted(ROOT.glob("mmseg/**/*.py")) + sorted(ROOT.glob("tools/*.py")) + \
              sorted(ROOT.glob("local_configs/**/*.py")) + sorted(ROOT.glob("*.py")):
@@ -191,7 +227,7 @@ def main() -> int:
     for c in configs:
         check_config(c)
 
-    print(f"checked {len(configs)} configs, the mmseg package exports, and syntax")
+    print(f"checked {len(configs)} configs, package exports, transform registration, and syntax")
     if failures:
         print(f"\n{len(failures)} problem(s):\n")
         for f in failures:

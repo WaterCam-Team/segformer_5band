@@ -688,8 +688,13 @@ class Normalize_5band(object):
                 img[:, :, i] = (band - lo) / (hi - lo + 1e-7)
 
         results["img"] = img
+        # img_norm_cfg is legacy metadata that mmseg/apis/test.py splats straight
+        # into mmcv.image.tensor2imgs(), which takes mean/std/to_rgb and nothing
+        # else. Putting `method` in here breaks every --show / --out-dir run with
+        # an unexpected-keyword error, so it goes in its own key.
         results["img_norm_cfg"] = dict(
-            mean=self.mean, std=self.std, to_rgb=self.to_rgb, method=self.method)
+            mean=self.mean, std=self.std, to_rgb=self.to_rgb)
+        results["img_norm_method"] = self.method
         return results
 
     def __repr__(self):
@@ -697,6 +702,7 @@ class Normalize_5band(object):
                 f"mean={self.mean}, std={self.std}, to_rgb={self.to_rgb})")
 
 
+@PIPELINES.register_module()
 class Normalize_1band(object):
     """Normalize a single-channel (grayscale/thermal) image using dataset statistics.
 
