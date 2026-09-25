@@ -33,8 +33,16 @@ model = dict(
 # dataset settings
 dataset_type = 'dataset_5band'
 data_root = 'dataroot'
+# Normalisation is declared, not inferred: it must match what the checkpoint
+# was trained with, and a mismatch produces a wrong mask with no error.
+# 'minmax' is what work_dirs/...65k_huantao/iter_100.pth was trained with.
+# The mean/std below are unused while method='minmax'; they are ImageNet RGB
+# values and there are only three of them for a five-band model. Switch to
+# method='meanstd' with five real per-band statistics only alongside a
+# checkpoint retrained that way -- see PERFORMANCE.md.
 img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True,
+    method='minmax')
 crop_size = (512, 1024)
 train_pipeline = [
     dict(type='Load_5band_ImageFromFile'),
