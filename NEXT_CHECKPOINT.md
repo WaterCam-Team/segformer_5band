@@ -153,3 +153,10 @@ channels from the pretrained filters and the thermal and NIR channels from their
 7. Re-seed the registration transform from a high-contrast field scene.
 8. Re-export ONNX through the metadata-aware exporter so the graph declares its normalisation, and
    re-run the node benchmarks.
+9. Regenerate the batch masks. Every `color_preserved_5_band_segmentation.png` written before
+   2026-09-26 is a matplotlib *rendering* of a mask rather than a mask — RGBA, at whatever size
+   `bbox_inches='tight'` produced, with a couple of hundred distinct values. `batch_segformer.sh`
+   and `segment_tiff_5band.py` both wrote them that way. Deliberately deferred to this point: they
+   would have to be regenerated after retraining anyway, so doing it against `iter_100` would only
+   produce better-formatted output from a checkpoint being replaced. Anything downstream that read
+   those PNGs as masks is reading a render until this is done.
