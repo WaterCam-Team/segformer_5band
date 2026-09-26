@@ -7,6 +7,18 @@ The current checkpoint is `work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_h
 — **SegFormer-B0, 100 iterations**. It is barely trained, and several findings below are consequences
 of that rather than of the architecture.
 
+Band numbers below are **0-based**, matching `photo_processing/training/modalities.py`
+(`R, G, B, THERMAL, NIR = 0, 1, 2, 3, 4`). The TIFF is RGB, then LWIR, then NIR:
+
+| 0-based | 1-based (rasterio / GDAL) | band |
+|---|---|---|
+| 0, 1, 2 | 1, 2, 3 | red, green, blue |
+| 3 | 4 | thermal (FLIR Lepton, LWIR) |
+| 4 | 5 | NIR difference |
+
+`coreg/README.md` and `photo_processing/README.md` number the same bands 1-based, so "band 4" is
+thermal there and NIR here. Check which convention a document is using before acting on it.
+
 ---
 
 ## 1. Normalisation is the decision that blocks everything else
@@ -39,7 +51,8 @@ against 52.4% correct.
 
 ## 2. The NIR band is lossy before the model ever sees it
 
-`coreg/coreg_multiple.py` builds band 4 as `cv2.subtract(red(NIR-ON), red(NIR-OFF))`. Three problems
+`coreg/coreg_multiple.py` builds band 4 — the NIR band, the last of the five — as
+`cv2.subtract(red(NIR-ON), red(NIR-OFF))`. Three problems
 compound:
 
 - `cv2.subtract` **saturates at 0** on uint8, so every pixel where NIR-OFF >= NIR-ON clips and is
@@ -48,8 +61,8 @@ compound:
   drift: `band0 + band4` against `red(NIR-ON)` ranges from MAE 0.25 to 28.9 across sessions.
 - It is a **temporal** difference, so anything moving between the two captures writes false NIR.
 
-**Proposed for the next capture generation: keep five bands, but make band 4 the raw NIR-ON red
-channel** rather than the clipped difference. The old difference stays recoverable inside the network
+**Proposed for the next capture generation: keep five bands in the same order, but make band 4
+(the NIR band) the raw NIR-ON red channel** rather than the clipped difference. The old difference stays recoverable inside the network
 as `band4 - band0`, because band 0 is exactly red(NIR-OFF), and it is then signed and unclipped. Same
 band count, same model shape, no extra storage.
 
@@ -132,7 +145,8 @@ channels from the pretrained filters and the thermal and NIR channels from their
 
 1. Settle the three open label decisions.
 2. Label, using the annotator; keep session grouping intact.
-3. Decide band 4: keep the clipped difference, or move to raw NIR-ON red.
+3. Decide band 4 (NIR): keep the clipped difference, or move to raw NIR-ON red. The band
+   *order* does not change — RGB, thermal, NIR.
 4. Run `training.stats` over the training split; put five means and five stds in the config.
 5. Set `method='meanstd'`. Train.
 6. Re-measure padding sensitivity against the new checkpoint; adopt /32 sizing if it still matters.
