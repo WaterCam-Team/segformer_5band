@@ -1,0 +1,2 @@
+# Exported ONNX models: never text-diff or line-ending-convert them.
+*.onnx binary
