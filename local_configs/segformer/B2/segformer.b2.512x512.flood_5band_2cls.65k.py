@@ -10,8 +10,7 @@ model = dict(
     pretrained='pretrained/mit_b2.pth',
     backbone=dict(
         type='mit_b2',
-        in_chans=5,
-        style='pytorch'),
+        in_chans=5),
     decode_head=dict(
         type='SegFormerHead',
         in_channels=[64, 128, 320, 512],
@@ -37,10 +36,14 @@ data_root = 'data/modality_comparison/'
 
 # REPLACE with values from: python tools/compute_band_stats.py --modality fiveband
 # Band order: R, G, B, Thermal, NIR
+# Declared normalisation. mean=0/std=1 over all five bands is an identity
+# transform, i.e. raw 0-255 preserved, which is what these comparison configs
+# have always done. Lengths must equal the band count or Normalize_5band raises.
 img_norm_cfg = dict(
     mean=[0.0, 0.0, 0.0, 0.0, 0.0],
     std=[1.0, 1.0, 1.0, 1.0, 1.0],
-    to_rgb=False)
+    to_rgb=False,
+    method='meanstd')
 
 crop_size = (512, 512)
 train_pipeline = [
