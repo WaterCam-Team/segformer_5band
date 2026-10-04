@@ -630,36 +630,76 @@ class Normalize(object):
 
 @PIPELINES.register_module()
 class Normalize_5band(object):
-    """Normalize the image.
+    """Normalise a multi-band image.
 
-    Added key is "img_norm_cfg".
+    `method` selects the scheme, and it MUST match what the checkpoint being
+    used was trained with. Feeding a model a distribution it never saw raises
+    no error, it just returns a quietly wrong mask, so the scheme is declared
+    here rather than inferred.
+
+    ``minmax``   per-band, per-image min-max over **every** band. This is what
+                 ``work_dirs/...65k_huantao/iter_100.pth`` was trained with, so
+                 it is the default until a checkpoint trained otherwise exists.
+                 It normalises each image independently, which discards the
+                 absolute radiometry that makes NIR informative -- water's low
+                 NIR reflectance is an absolute signature. See PERFORMANCE.md.
+    ``meanstd``  ``(img - mean) / std`` with one entry per band. Preserves
+                 absolute values. Requires len(mean) == len(std) == n_bands and
+                 raises otherwise: a 3-entry ImageNet mean applied to a 5-band
+                 image previously normalised only RGB and left thermal and NIR
+                 at raw 0-255, a ~100x inter-channel scale mismatch, silently.
 
     Args:
-        mean (sequence): Mean values of 3 channels.
-        std (sequence): Std values of 3 channels.
-        to_rgb (bool): Whether to convert the image from BGR to RGB,
-            default is true.
+        mean (sequence): per-band means, used by ``meanstd``.
+        std (sequence): per-band standard deviations, used by ``meanstd``.
+        to_rgb (bool): retained for config compatibility; not applied here.
+        method (str): ``minmax`` or ``meanstd``.
     """
 
-    def __init__(self, mean, std, to_rgb=True):
+    METHODS = ("minmax", "meanstd")
+
+    def __init__(self, mean, std, to_rgb=True, method="minmax"):
+        if method not in self.METHODS:
+            raise ValueError(
+                f"Normalize_5band: unknown method {method!r}; "
+                f"choose from {', '.join(self.METHODS)}")
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.to_rgb = to_rgb
+        self.method = method
 
     def __call__(self, results):
-        img = results['img'].astype(np.float32)
-        for i in range(img.shape[2]):
-            img[:, :, i] = (img[:, :, i] - self.mean[i]) / (self.std[i] + 1e-7)
-        results['img'] = img
-        results['img_norm_cfg'] = dict(
+        img = results["img"].astype(np.float32)
+        n_bands = img.shape[2]
+
+        if self.method == "meanstd":
+            if len(self.mean) != n_bands or len(self.std) != n_bands:
+                raise ValueError(
+                    f"Normalize_5band(method='meanstd') needs one mean and std per "
+                    f"band, got {len(self.mean)} mean / {len(self.std)} std for "
+                    f"{n_bands} bands. Normalising only the first few bands leaves "
+                    f"the rest at raw 0-255 and is never what you want.")
+            for i in range(n_bands):
+                img[:, :, i] = (img[:, :, i] - self.mean[i]) / (self.std[i] + 1e-7)
+        else:
+            for i in range(n_bands):
+                band = img[:, :, i]
+                lo, hi = float(band.min()), float(band.max())
+                img[:, :, i] = (band - lo) / (hi - lo + 1e-7)
+
+        results["img"] = img
+        # img_norm_cfg is legacy metadata that mmseg/apis/test.py splats straight
+        # into mmcv.image.tensor2imgs(), which takes mean/std/to_rgb and nothing
+        # else. Putting `method` in here breaks every --show / --out-dir run with
+        # an unexpected-keyword error, so it goes in its own key.
+        results["img_norm_cfg"] = dict(
             mean=self.mean, std=self.std, to_rgb=self.to_rgb)
+        results["img_norm_method"] = self.method
         return results
 
     def __repr__(self):
-        repr_str = self.__class__.__name__
-        repr_str += f'(mean={self.mean}, std={self.std}, to_rgb=' \
-                    f'{self.to_rgb})'
-        return repr_str
+        return (f"{self.__class__.__name__}(method={self.method}, "
+                f"mean={self.mean}, std={self.std}, to_rgb={self.to_rgb})")
 
 
 @PIPELINES.register_module()

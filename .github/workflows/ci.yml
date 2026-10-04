@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Config contracts (Python 3.9, matching the node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.9 on purpose: it is what the inference environment on the sensor
+      # nodes runs (miniforge 5band env, torch 1.7.1, mmcv 1.3.0). Running the
+      # checks here means syntax the nodes cannot parse fails in CI instead of
+      # on deployed hardware, which is how a PEP 604 union (`dict | None`)
+      # reached a node and made the file unimportable.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # No dependencies. The checks are deliberately static: installing this
+      # codebase's 2020-era torch and mmcv stack on a runner is slow and
+      # brittle, and every bug these catch is a config or package contract
+      # rather than a numerical one.
+      - name: Check config and package contracts
+        run: python tools/check_configs.py

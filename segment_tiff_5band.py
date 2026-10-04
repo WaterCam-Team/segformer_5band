@@ -273,15 +273,37 @@ class SingleFileInference5Band:
         if output_dir:  # Only create directory if there is a directory component
             os.makedirs(output_dir, exist_ok=True)
         
-        # Save as PNG for visualization
+        # Save as PNG. This is the segmentation MASK, not a picture of one.
+        #
+        # It used to be written with plt.savefig(bbox_inches='tight', dpi=150),
+        # which produced an RGBA rendering of the palette at whatever size
+        # matplotlib chose — for a 972x1296 input, an 871x1162x4 image with 206
+        # distinct values. SU-WaterCam/tools/segformer_daemon.py writes the same
+        # logical output as a single-channel mask at source resolution, so the
+        # two segmentation paths that are meant to be interchangeable were not:
+        # tools/watercam.py only ever takes this one, and handed the render
+        # straight to the LoRa bitmap compressor.
+        #
+        # Class indices are scaled across 0-255 exactly as the daemon does it,
+        # so a mask from either path is the same file.
         if output_path.endswith('.png'):
-            # Create colored segmentation map
-            colored_result = self._colorize_segmentation(result)
-            # Use non-interactive matplotlib backend
+            from PIL import Image as _Image
+
+            mask = result.astype(np.uint8)
+            n_classes = int(mask.max()) + 1 if self.palette is None else len(self.palette)
+            if n_classes > 1:
+                vis = np.round(mask.astype(np.float32) * (255.0 / (n_classes - 1))).astype(np.uint8)
+            else:
+                vis = mask
+            _Image.fromarray(vis).save(output_path)
+
+            # The colourised view is still useful for eyeballing a scene, so it
+            # is kept — beside the mask, not instead of it.
+            preview_path = output_path[:-len('.png')] + '_preview.png'
             plt.figure(figsize=(10, 8))
-            plt.imshow(colored_result)
+            plt.imshow(self._colorize_segmentation(result))
             plt.axis('off')
-            plt.savefig(output_path, bbox_inches='tight', pad_inches=0, dpi=150)
+            plt.savefig(preview_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close()  # Close figure to free memory
         
         # Save as GeoTIFF if transform and CRS are provided
