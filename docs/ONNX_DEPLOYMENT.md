@@ -92,6 +92,33 @@ entirely instead of being bounded.
 - **The checkpoint is `iter_100`** — 100 training iterations, in a directory
   named `65k`. Whatever it segments, it is not a trained model.
 
+## The committed model
+
+`segformer_5band_dyn.onnx` in the repo root is the model the nodes serve, with
+`segformer_5band_fp32.onnx` as a symlink to it: the name the SU-WaterCam
+daemon's FP32 fallback loads.
+
+| | |
+|---|---|
+| Checkpoint | `work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_huantao/iter_100.pth` (not in the repo; 44.8 MB, dated 2024-09-05 on node 005) |
+| Config | `local_configs/segformer/B0/segformer.b0.512x512.flood_5band_2cls.65k.test.py` |
+| Export | the "one-off export" command above (pytorch 1.7, opset 12) |
+| sha256 | `131550d1934a75c51e3bce557d67683c4569ef15d316f283e2167bff9538f42d` |
+| Precision | FP32, dynamic H/W: input `[1, 5, h, w]`, logits `[1, 2, h, w]` |
+| Normalization | none declared, so the daemon applies per-image min-max, which is what `iter_100` was trained under (see `NEXT_CHECKPOINT.md`) |
+
+Provenance was checked on 2026-10-04 by re-running that export on node 005:
+the result is byte-for-byte identical to the committed file (all 268 weight
+tensors equal). Everything under **Limits** applies to it: it is the
+100-iteration checkpoint, and its accuracy has never been measured.
+
+The weights are derived from SegFormer and fall under this repository's NVIDIA
+Source Code License (non-commercial use).
+
+When a retrained checkpoint replaces it, re-export it through the
+metadata-aware exporter so it declares its normalization, replace this file and
+update this section (see `NEXT_CHECKPOINT.md`).
+
 ## If you are about to label data
 
 Two details in `dataset_5band` will silently waste the effort:
