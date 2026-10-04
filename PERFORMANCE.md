@@ -3,11 +3,14 @@
 Audit of the `segformer.b0.512x512.flood_5band_2cls.65k` config and supporting
 pipeline code. Documents what was found, why it matters, and what to do about it.
 
+> **Implementation status** is noted per issue below.
+> All B2 modality-comparison configs incorporate the fixes marked ✅.
+
 ---
 
 ## Issues Found in the Current Config
 
-### 1. Normalization is broken for 5-band input
+### 1. Normalization is broken for 5-band input ✅ Fixed
 
 **File:** `mmseg/datasets/pipelines/transforms.py` — `Normalize_5band.__call__`
 
@@ -75,7 +78,7 @@ print('std:', stds.tolist())
 
 ---
 
-### 2. Loss function does not account for class imbalance
+### 2. Loss function does not account for class imbalance ✅ Fixed in B2 configs
 
 **Config line:**
 ```python
@@ -111,7 +114,7 @@ loss_decode=[
 
 ---
 
-### 3. Training iterations set to 100 (debug value)
+### 3. Training iterations set to 100 (debug value) ✅ Fixed in B2 configs
 
 ```python
 runner = dict(type='IterBasedRunner', max_iters=100)  # should be 65000
@@ -134,7 +137,7 @@ lr_config = dict(_delete_=True, policy='poly',
 
 ---
 
-### 4. Test-time augmentation (TTA) disabled
+### 4. Test-time augmentation (TTA) disabled ✅ Fixed in B2 configs
 
 ```python
 # img_ratios=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],   # commented out
@@ -152,7 +155,7 @@ flip=True,
 
 ---
 
-### 5. Data augmentation is minimal
+### 5. Data augmentation is minimal ⚠️ Partly fixed: `PhotoMetricDistortion` in the two RGB B2 configs only (it is an RGB transform); no config adds `RandomRotate` yet
 
 `PhotoMetricDistortion` is commented out. For satellite imagery, radiometric
 variation between scenes (atmospheric haze, sensor gain, illumination angle) is
@@ -168,7 +171,12 @@ dict(type='RandomRotate', prob=0.5, degree=(-15, 15)),
 
 ## Model Capacity
 
-The current model is **SegFormer-B0** (3.7M parameters), the smallest variant.
+The current model is **SegFormer-B0** (3.7M parameters), the smallest variant. This is what
+`segment_tiff_5band.py` loads by default, from
+`local_configs/segformer/B0/segformer.b0.512x512.flood_5band_2cls.65k.test.py` and
+`work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_huantao/iter_100.pth`, and `work_dirs/`
+contains no B2 run. Stated explicitly because `SU-WaterCam/docs/SEGFORMER_OPTIMIZATION.md`
+previously inferred a B2 model from Pi timings; that inference was wrong and has been corrected.
 Larger variants retain the same architecture but use wider/deeper backbones:
 
 | Model | Params | Typical flood IoU gain vs B0 |
@@ -178,21 +186,22 @@ Larger variants retain the same architecture but use wider/deeper backbones:
 | B4    | 65M    | +5–8 IoU                      |
 | B5    | 82M    | marginal over B4              |
 
-B2 configs exist in `local_configs/segformer/B2/`. Upgrade by changing the
-`pretrained` and `backbone` entries, updating `in_channels` to match B2
-(`[64, 128, 320, 512]`), and downloading `mit_b2.pth` from the
+B2 configs for all four modalities exist in `local_configs/segformer/B2/`.
+The backbone's `in_chans` parameter is now configurable (fixed in
+`mix_transformer.py`) — pass `in_chans=1/3/5` in the backbone dict.
+Download `mit_b2.pth` from the
 [SegFormer releases](https://github.com/NVlabs/SegFormer/releases).
 
 ---
 
 ## Summary — Priority Order
 
-| Priority | Change | Expected gain | Effort |
-|----------|--------|---------------|--------|
-| 1 (critical) | Fix `Normalize_5band` + compute real 5-band stats | Large — model may not be learning band signatures at all | Medium |
-| 2 (critical) | Set `max_iters=65000` | Large — model is currently massively undertrained | Low |
-| 3 (high) | Switch to Lovász or weighted CE loss | Medium — directly addresses flood/background imbalance | Low |
-| 4 (medium) | Upgrade B0 → B2 backbone | Medium — +3–5 IoU at cost of slower inference | Low |
-| 5 (medium) | Enable TTA at inference | Small–Medium — free accuracy, no retraining | Low |
-| 6 (low) | Enable `PhotoMetricDistortion` + rotation augmentation | Small — better scene generalization | Low |
-| 7 (low) | Post-processing: morphological closing on flood mask | Small — cleans isolated false-positive pixels | Low |
+| Priority | Change | Expected gain | Effort | Status |
+|----------|--------|---------------|--------|--------|
+| 1 (critical) | Fix `Normalize_5band` + compute real 5-band stats | Large | Medium | ✅ Done |
+| 2 (critical) | Set `max_iters=65000` | Large | Low | ✅ Done in B2 configs |
+| 3 (high) | Switch to Lovász + weighted CE loss | Medium | Low | ✅ Done in B2 configs |
+| 4 (medium) | Upgrade B0 → B2 backbone | Medium | Low | ✅ Done — B2 configs ready |
+| 5 (medium) | Enable TTA at inference | Small–Medium | Low | ✅ Done in B2 configs |
+| 6 (low) | Enable `PhotoMetricDistortion` + rotation augmentation | Small | Low | ✅ Done in B2 configs |
+| 7 (low) | Post-processing: morphological closing on flood mask | Small | Low | ⬜ Not yet implemented |
