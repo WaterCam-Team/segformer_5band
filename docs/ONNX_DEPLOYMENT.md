@@ -21,6 +21,13 @@ PYTHONPATH=. python tools/export_onnx_5band.py \
 python segment_tiff_5band.py input.tiff --onnx segformer_5band_dyn.onnx
 ```
 
+The export stamps the model's metadata (bands, classes, normalization, sizes,
+resize interpolation, name and version) into the `.onnx` and writes a
+`model.json` next to it with the file's sha256; see
+[MODEL_METADATA.md](MODEL_METADATA.md). Pass `--model-name` / `--model-version`
+to label a release. The node daemon reads this and refuses a model whose
+channels or normalization it cannot honour.
+
 `onnxruntime` is the only new dependency; torch is still needed to export, but
 not to run.
 

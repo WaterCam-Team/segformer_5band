@@ -33,3 +33,24 @@ jobs:
       # rather than a numerical one.
       - name: Check config and package contracts
         run: python tools/check_configs.py
+
+  export-metadata:
+    name: Export -> onnxruntime path on a synthetic fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # A tiny random network, not SegFormer, so no mmcv/mmseg stack and no
+      # checkpoint; the TIFF is generated inside the test.
+      - name: Install
+        run: |
+          pip install numpy rasterio onnx onnxruntime pytest
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Model metadata and export tests
+        run: python -m pytest -q -o addopts="" tests/test_model_metadata.py tests/test_export_onnx_5band.py

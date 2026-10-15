@@ -5,11 +5,12 @@ prompt learner, no CLIP. The only thing pinning the graph to its traced
 resolution is the head resizing _c4/_c3/_c2 to size=c1.size()[2:], which
 mmseg.ops.resize turns into Python ints.
 """
-import argparse, time
-import mmcv, numpy as np, torch, torch.nn as nn
+import argparse, os, sys, time
+import numpy as np, torch, torch.nn as nn
 import torch.nn.functional as F
-from mmcv.runner import load_checkpoint
-from mmseg.models import build_segmentor
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import model_metadata as MM
 
 
 def patch_resize_for_export():
@@ -49,6 +50,55 @@ class Wrap(nn.Module):
                              align_corners=self.seg.align_corners)
 
 
+def find_transform(cfg, type_name):
+    """First pipeline step of `type_name` in cfg.data.test (nested or flat), else None."""
+    def walk(steps):
+        for t in steps or []:
+            if t.get('type') == type_name:
+                return t
+            found = walk(t.get('transforms'))
+            if found:
+                return found
+    return walk(cfg.data.test.pipeline)
+
+
+def metadata_from_config(cfg, *, model_name, model_version, bands, classes,
+                         height, width, input_hw='dynamic'):
+    """Schema-1 metadata_props for this config: normalization and resize as trained.
+
+    Normalize_5band is applied by the node daemon, never embedded in this graph,
+    so the graph takes already-normalised input.
+    """
+    norm = find_transform(cfg, 'Normalize_5band') or {}
+    method = norm.get('method', 'minmax')
+    stats = {}
+    if method == 'meanstd':
+        stats = {'norm_mean': norm['mean'], 'norm_std': norm['std']}
+    # mmcv's Resize defaults to bilinear
+    interp = (find_transform(cfg, 'Resize') or {}).get('interpolation', 'bilinear')
+    return MM.build_metadata(
+        model_name=model_name, model_version=model_version, bands=bands,
+        classes=classes, normalization=method, norm_stats=stats,
+        input_hw=input_hw, trained_size=(height, width),
+        resize_interpolation=interp, arch='segformer-b0')
+
+
+def export_graph(wrap, dummy, out, opset=12):
+    """Trace `wrap` to ONNX with dynamic H/W (any 5-channel nn.Module works)."""
+    import inspect
+    kw = {}
+    # torch >= 2.9 defaults to the dynamo exporter; torch 1.7 has no such flag
+    if 'dynamo' in inspect.signature(torch.onnx.export).parameters:
+        kw['dynamo'] = False
+    with torch.no_grad():
+        torch.onnx.export(
+            wrap, dummy, out, input_names=['input'],
+            output_names=['logits'], opset_version=opset,
+            do_constant_folding=True,
+            dynamic_axes={'input': {2: 'h', 3: 'w'},
+                          'logits': {2: 'h', 3: 'w'}}, **kw)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--config', required=True)
@@ -58,7 +108,19 @@ def main():
     ap.add_argument('--height', type=int, default=512)
     ap.add_argument('--width', type=int, default=1024)
     ap.add_argument('--opset', type=int, default=12)
+    ap.add_argument('--model-name', default=None,
+                    help='recorded in the metadata (default: output file stem)')
+    ap.add_argument('--model-version', default=None,
+                    help='recorded in the metadata (default: today, ISO date)')
+    ap.add_argument('--band-names', dest='band_names',
+                    default='red,green,blue,thermal,nir',
+                    help='band order the model was trained on')
+    ap.add_argument('--classes', default='background,water')
     args = ap.parse_args()
+
+    import mmcv
+    from mmcv.runner import load_checkpoint
+    from mmseg.models import build_segmentor
 
     cfg = mmcv.Config.fromfile(args.config)
     cfg.model.pretrained = None
@@ -80,14 +142,18 @@ def main():
         t0 = time.time()
         ref = wrap(dummy)
         print(f'  torch forward ok: {tuple(ref.shape)}  ({time.time()-t0:.1f}s)')
-        torch.onnx.export(
-            wrap, dummy, args.out, input_names=['input'],
-            output_names=['logits'], opset_version=args.opset,
-            do_constant_folding=True,
-            dynamic_axes={'input': {2: 'h', 3: 'w'},
-                          'logits': {2: 'h', 3: 'w'}})
+    export_graph(wrap, dummy, args.out, args.opset)
     unpatch()
+    bands = args.band_names.split(',')
+    assert len(bands) == args.bands, '--band-names must match the band count'
+    props = metadata_from_config(
+        cfg, model_name=args.model_name or os.path.splitext(os.path.basename(args.out))[0],
+        model_version=args.model_version, bands=bands,
+        classes=args.classes.split(','), height=args.height, width=args.width)
+    MM.stamp_onnx(args.out, props)
     print(f'exported -> {args.out}')
+    print(f'metadata -> {MM.write_sidecar(args.out, props)}  '
+          f'(normalization {props["normalization"]}, applied by the node)')
 
     import onnxruntime as ort
     sess = ort.InferenceSession(args.out, providers=['CPUExecutionProvider'])
