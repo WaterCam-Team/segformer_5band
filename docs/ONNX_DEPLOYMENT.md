@@ -38,7 +38,7 @@ not to run.
 
 ## Results
 
-Measured on 64 real 5-band captures (Onondaga Lake Park, 1296×972, uint8).
+Measured on 64 real 5-band field captures (1296×972, uint8).
 
 | | per image |
 |---|---|
