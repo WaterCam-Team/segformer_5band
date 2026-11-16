@@ -1,9 +1,14 @@
 # Running the 5-band model through ONNX Runtime
 
-The deployment target is a Raspberry Pi 4B (Cortex-A72, 4 cores, 3.7 GiB)
-running the `5band` conda environment: Python 3.9, torch 1.7.1, mmcv 1.3.0.
-That torch was built for aarch64 in 2020, before most of PyTorch's ARM
-optimisation work, and it is the single largest cost in inference.
+The deployment target is a Raspberry Pi 4B (Cortex-A72, 4 cores, 3.7 GiB).
+The measurements below were made against the `5band` conda environment pinned
+in `5band_environment.yml`: Python 3.9, torch 1.7.1, mmcv-full 1.3.0 (aarch64
+wheels). That torch was built in 2020, before most of PyTorch's ARM
+optimisation work, and it is the single largest cost in inference. (Status
+2026-11-14: nodes run the exported `.onnx` through ONNX Runtime, which needs
+neither torch nor mmcv. The pinned environment is only needed to re-export on a
+node or to reproduce the torch timings. The repo's CI runs the exporter tests
+with Python 3.11 and current CPU torch on a small synthetic network.)
 
 ONNX Runtime 1.19.2 runs the same graph **19.8× faster** with numerically
 identical output.
@@ -33,7 +38,7 @@ not to run.
 
 ## Results
 
-Measured on 64 real 5-band captures (Onondaga Lake Park, 1296×972, uint8).
+Measured on 64 real 5-band field captures (1296×972, uint8).
 
 | | per image |
 |---|---|
@@ -107,7 +112,7 @@ daemon's FP32 fallback loads.
 
 | | |
 |---|---|
-| Checkpoint | `work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_huantao/iter_100.pth` (not in the repo; 44.8 MB, dated 2024-09-05 on node 005) |
+| Checkpoint | `work_dirs/segformer.b0.512x512.flood_5band_2cls.65k_huantao/iter_100.pth` (committed in this repo; 44.8 MB, dated 2024-09-05 on node 005) |
 | Config | `local_configs/segformer/B0/segformer.b0.512x512.flood_5band_2cls.65k.test.py` |
 | Export | the "one-off export" command above (pytorch 1.7, opset 12) |
 | sha256 | `131550d1934a75c51e3bce557d67683c4569ef15d316f283e2167bff9538f42d` |
@@ -118,6 +123,12 @@ Provenance was checked on 2026-10-04 by re-running that export on node 005:
 the result is byte-for-byte identical to the committed file (all 268 weight
 tensors equal). Everything under **Limits** applies to it: it is the
 100-iteration checkpoint, and its accuracy has never been measured.
+
+The RGB fallback model (`type_pool`) is not exported with this tool. RGB models
+trained in the photo-masks repository are exported as described in that
+repository's `training/README.md`, section "Deploying to the camera nodes".
+(To confirm: that section documents SegFormer exports in general; it does not
+name `type_pool`.)
 
 The weights are derived from SegFormer and fall under this repository's NVIDIA
 Source Code License (non-commercial use).

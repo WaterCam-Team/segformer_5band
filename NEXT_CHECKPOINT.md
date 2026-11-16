@@ -1,5 +1,7 @@
 # Preparing the next checkpoint
 
+> Status 2026-11-14: last edited 2026-09-26. The 5-band `iter_100` checkpoint described here is still the committed and default model; no retrained checkpoint is committed yet. Metadata-aware export (`docs/MODEL_METADATA.md`) has been added since.
+
 Written 2026-09-25, after a week of measuring the deployed pipeline on node `ufo-01-01-005`.
 Everything here is measured unless it says otherwise.
 

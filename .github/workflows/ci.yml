@@ -12,7 +12,8 @@ permissions:
 jobs:
   contracts:
     name: Config contracts (Python 3.9, matching the node)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest (26.04) has no Python 3.9 build for setup-python.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:

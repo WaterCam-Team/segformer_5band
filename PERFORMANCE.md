@@ -1,5 +1,7 @@
 # Segmentation Performance — Findings and Improvement Guide
 
+> Status 2026-11-14: last edited 2026-10-04; the per-issue status marks below are as of that date. See `NEXT_CHECKPOINT.md` and `docs/ONNX_DEPLOYMENT.md` for later findings.
+
 Audit of the `segformer.b0.512x512.flood_5band_2cls.65k` config and supporting
 pipeline code. Documents what was found, why it matters, and what to do about it.
 
