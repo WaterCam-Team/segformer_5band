@@ -126,7 +126,7 @@ tensors equal). Everything under **Limits** applies to it: it is the
 
 The RGB fallback model (`type_pool`) is not exported with this tool. RGB models
 trained in the photo-masks repository are exported as described in that
-repository's `training/README.md`, section "Deploying to the camera nodes".
+repository's `training/README.md`, section "Deploying to the HazMapper nodes".
 (To confirm: that section documents SegFormer exports in general; it does not
 name `type_pool`.)
 

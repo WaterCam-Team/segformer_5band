@@ -1,6 +1,6 @@
 # segformer_5band
 
-Water segmentation for the WaterCam sensor nodes, built on SegFormer. The
+Water segmentation for the HazMapper sensor nodes, built on SegFormer. The
 repository is a fork of the SegFormer code (mmsegmentation based) with 5-band
 data loading, training configs, and an ONNX export for the nodes.
 
